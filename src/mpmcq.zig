@@ -17,7 +17,6 @@ pub fn MPMCQ(comptime T: type, comptime slots: usize) type {
         // Head and Tail continously count up
         head: atomic.Value(usize) align(64) = atomic.Value(usize).init(0),
         tail: atomic.Value(usize) align(64) = atomic.Value(usize).init(0),
-
         slots: [slots]SLOT align(64) = [_]SLOT{.{}} ** slots,
 
         pub inline fn enqueue(self: *@This(), item: *const T) void {
@@ -32,7 +31,7 @@ pub fn MPMCQ(comptime T: type, comptime slots: usize) type {
             // Write
             @memcpy(&slot.data, @as([*]const u8, @ptrCast(item))[0..@sizeOf(T)]);
 
-            // Release Slot (ittr + set even)
+            // Release Slot (ittr + set odd)
             slot.turn.store((head / slots) * 2 + 1, .release);
         }
 
@@ -66,11 +65,11 @@ pub fn MPMCQ(comptime T: type, comptime slots: usize) type {
                     // Try to aquire it
                     if (self.head.cmpxchgStrong(head, head + 1, .acq_rel, .acquire)) |_| {
                         head = self.head.load(.acquire);
-                    } else { // else aquired
+                    } else { // aquired
 
                         // Write and Release
                         @memcpy(&slot.data, @as([*]const u8, @ptrCast(item))[0..@sizeOf(T)]);
-                        slot.turn.store((head / slots) * 2 + 1, .release); // (itter + set-even)
+                        slot.turn.store((head / slots) * 2 + 1, .release); // (itter + set-odd)
 
                         return true; // Success!
                     }
@@ -100,7 +99,7 @@ pub fn MPMCQ(comptime T: type, comptime slots: usize) type {
                     // Try to aquire it
                     if (self.tail.cmpxchgStrong(tail, tail + 1, .acq_rel, .acquire)) |_| {
                         tail = self.tail.load(.acquire);
-                    } else { // else aquired
+                    } else { // aquired
 
                         // Write and Release
                         @memcpy(@as([*]u8, @ptrCast(item))[0..@sizeOf(T)], &slot.data);
@@ -121,28 +120,4 @@ pub fn MPMCQ(comptime T: type, comptime slots: usize) type {
             }
         }
     };
-}
-
-pub fn main() !void {
-    const Queue = MPMCQ(c_int, 10);
-    var queue = Queue{};
-
-    var value1: c_int = 42;
-    var value2: c_int = 0;
-
-    queue.enqueue(&value1);
-    queue.dequeue(&value2);
-
-    std.debug.print("Enqueued: {}, Dequeued: {}\n", .{ value1, value2 });
-
-    var value3: c_int = 100;
-    var value4: c_int = 0;
-
-    if (queue.try_enqueue(&value3)) {
-        std.debug.print("Successfully enqueued: {}\n", .{value3});
-    }
-
-    if (queue.try_dequeue(&value4)) {
-        std.debug.print("Successfully dequeued: {}\n", .{value4});
-    }
 }
