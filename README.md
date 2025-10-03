@@ -13,7 +13,7 @@ Copy `mpmcq.zig` into your project, or add it as a dependency using Zig's packag
 .dependencies = .{
     .mpmcq = .{
         .url = "https://github.com/173duprot/mpmcq.zig/archive/refs/tags/v0.1.0.tar.gz",
-        .hash = "1220KY1yysK0AACReK4QgM_NLKt7bAoZQKvjo_YYPIg0_44W",
+        .hash = "mpmcq-0.1.0-KY1yysK0AACReK4QgM_NLKt7bAoZQKvjo_YYPIg0_44W",
     },
 },
 
